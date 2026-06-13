@@ -4,12 +4,9 @@
 # APIs: both free, no API keys needed
 
 import requests
-import smtplib
-import os
-from email.mime.text import MIMEText
 from datetime import date
 
-# -- FUNCTION 1: Weather ---------------------------------------
+# -- FUNCTION 1: Weather -----------------------------------------------------
 def get_weather(city="Trivandrum"):
     """Fetch today's weather as a one-line text summary."""
     url = f"https://wttr.in/{city}?format=3"
@@ -20,73 +17,78 @@ def get_weather(city="Trivandrum"):
     except Exception as e:
         return f"Weather unavailable ({e})"
 
-def send_alert_email(weather_text):
-    """Send email alert for extreme weather"""
-    sender = "diyarajesh05diya@gmail.com" # CHANGE THIS to your Gmail
-    receiver = "diyarajesh05diya@gmail.com" # CHANGE THIS to your Gmail
-    password = os.getenv("GMAIL_APP_PASSWORD")
-
-    body = f"Weather Alert for Talipparamba\n\n{weather_text}\n\nSent by Pulse Bot"
-    msg = MIMEText(body)
-    msg['Subject'] = f"Weather Alert: {weather_text}"
-    msg['From'] = sender
-    msg['To'] = receiver
-
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender, password)
-            server.sendmail(sender, receiver, msg.as_string())
-        print("Alert email sent successfully")
-    except Exception as e:
-        print(f"Email failed: {e}")
-
-# -- FUNCTION 2: Quote ---------------------------------------
+# -- FUNCTION 2: Quote ------------------------------------------------------
 def get_quote():
     """Fetch a random motivational quote from ZenQuotes."""
     url = "https://zenquotes.io/api/random"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
-        data = response.json()
-        quote = data[0]['q']
-        author = data[0]['a']
-        return f'"{quote}" — {author}'
+        data = response.json() # converts JSON text to a Python list
+        quote = data[0]["q"] # the quote text
+        author = data[0]["a"] # the author name
+        return f'"{quote}" - {author}'
     except Exception as e:
         return f"Quote unavailable ({e})"
 
-# -- MAIN FUNCTION ---------------------------------------
-def main():
-    today = date.today().strftime("%B %d, %Y")
+# -- FUNCTION 3: History Fact -----------------------------------------------
+def get_history_fact():
+    try:
+        url = "https://history.muffinlabs.com/date"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        # Grab the first event for today
+        event = data['data']['Events'][0]
+        year = event['year']
+        text = event['text']
+        return f"On this day in {year}: {text}"
+    except:
+        return "History fact unavailable today"       
+
+# -- FUNCTION 4: Build the summary -------------------------------
+def build_summary():
+    """Assemble the full daily summary from all data sources."""
+    today = date.today().strftime("%A, %d %B %Y") # e.g. Monday, 09 June 2026
     weather = get_weather()
     quote = get_quote()
+    history = get_history_fact() # NEW LINE ADDED
 
-    # Task 1: Send email alert if temp > 35°C or Rain
-    if "°C" in weather:
-        temp_str = weather.split("°C")[0].split()[-1].replace("+","")
-        try:
-            temp = int(temp_str)
-            if temp > 35 or "Rain" in weather:
-                send_alert_email(weather)
-        except:
-            pass
+    # Triple-quoted strings span multiple lines - great for formatted output
+    summary = f"""
+========================================
+PULSE - Daily Summary
+{today}
+========================================
 
-    # Create the daily briefing
-    briefing = f"""
-Pulse Daily Briefing - {today}
+WEATHER
+{weather}
 
-Weather: {weather}
-
-Quote of the Day:
+TODAY'S QUOTE
 {quote}
 
-Have a great day!
+ON THIS DAY
+{history}
+
+========================================
 """
+    return summary
 
-    # Save to file for GitHub Actions artifact
-    with open("briefing.txt", "w", encoding="utf-8") as f:
-        f.write(briefing.strip())
+# -- FUNCTION 4: Run everything ----------------------------------------------
+def run():
+    """Main entry point. Called by GitHub Actions."""
+    summary = build_summary()
 
-    print(briefing.strip())
+    # Print to the GitHub Actions log (visible in the Actions tab)
+    print(summary)
 
+    # Save to a file (uploaded as a downloadable artifact by the workflow)
+    with open("daily_summary.txt", "w", encoding="utf-8") as f:
+        f.write(summary)
+
+    print("Pulse ran successfully.")
+
+# -- Entry point guard -------------------------------------------------------
+# Only runs when you execute: python bot.py
+# Does NOT run when another file imports bot.py
 if __name__ == "__main__":
-    main()
+    run()
