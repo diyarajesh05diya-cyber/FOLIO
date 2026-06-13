@@ -31,19 +31,34 @@ def get_quote():
     except Exception as e:
         return f"Quote unavailable ({e})"
 
-# -- FUNCTION 3: Build the summary -------------------------------------------
+# -- FUNCTION 3: History Fact -----------------------------------------------
+def get_history_fact():
+    try:
+        url = "https://history.muffinlabs.com/date"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        # Grab the first event for today
+        event = data['data']['Events'][0]
+        year = event['year']
+        text = event['text']
+        return f"On this day in {year}: {text}"
+    except:
+        return "History fact unavailable today"       
+
+# -- FUNCTION 4: Build the summary -------------------------------
 def build_summary():
     """Assemble the full daily summary from all data sources."""
     today = date.today().strftime("%A, %d %B %Y") # e.g. Monday, 09 June 2026
     weather = get_weather()
     quote = get_quote()
+    history = get_history_fact() # NEW LINE ADDED
 
     # Triple-quoted strings span multiple lines - great for formatted output
     summary = f"""
-=================================
+========================================
 PULSE - Daily Summary
 {today}
-=================================
+========================================
 
 WEATHER
 {weather}
@@ -51,7 +66,10 @@ WEATHER
 TODAY'S QUOTE
 {quote}
 
-=================================
+ON THIS DAY
+{history}
+
+========================================
 """
     return summary
 
