@@ -7,7 +7,7 @@ import requests
 from datetime import date
 
 # -- FUNCTION 1: Weather -----------------------------------------------------
-def get_weather(city="Talipparamba"):
+def get_weather(city="Trivandrum"):
     """Fetch today's weather as a one-line text summary."""
     url = f"https://wttr.in/{city}?format=3"
     try:
